@@ -1,0 +1,4 @@
+park:
+    people: 5
+    capacity: 10
+    game-cost: 1.0
