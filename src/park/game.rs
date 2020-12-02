@@ -2,6 +2,7 @@ use std::{thread, time};
 use rand::prelude::*;
 static MSG_ERROR_OPEN_R: &str = "Error reading park state.";
 static MSG_ERROR_CASH_W: &str = "Error writing cash.";
+static REPAIR_TIME: u64 = 2;
 
 pub struct Game {
     pub mutex_cash: std::sync::Arc<std::sync::Mutex<f32>>,
@@ -22,7 +23,7 @@ impl Game {
         while *self.lock_park_is_open.read().expect(MSG_ERROR_OPEN_R) {
             if self.have_flaw(){
                 //Duermo mientras me reparo
-                thread::sleep(self.duration);
+                thread::sleep(time::Duration::from_secs(REPAIR_TIME));
             }
 
             //Duermo mientras dure el juego
