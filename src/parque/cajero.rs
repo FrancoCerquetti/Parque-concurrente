@@ -1,4 +1,6 @@
 use std::{thread, time};
+static MSJ_ERROR_CAJA: &str = "Error al leer valor de caja";
+static MSJ_ERROR_ABIERTO: &str = "Error al leer valor de estado del parque";
 
 pub struct Cajero {
     pub intervalo: time::Duration,
@@ -8,12 +10,12 @@ pub struct Cajero {
 
 impl Cajero {
     pub fn iniciar(&mut self){
-        while *self.lock_parque_abierto.read().expect("Error al leer valor de estado del parque") {
+        while *self.lock_parque_abierto.read().expect(MSJ_ERROR_ABIERTO) {
             thread::sleep(self.intervalo);
-            let caja = self.lock_caja.read().expect("Error al leer valor de caja");
+            let caja = self.lock_caja.read().expect(MSJ_ERROR_CAJA);
             println!("Caja: {:?}", *caja);
         }
-        let caja = self.lock_caja.read().expect("Error al leer valor de caja");
+        let caja = self.lock_caja.read().expect(MSJ_ERROR_CAJA);
         println!("Valor caja final: {:?}", *caja);
     }
 }
