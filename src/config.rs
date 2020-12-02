@@ -4,10 +4,10 @@ use yaml_rust::YamlLoader;
 
 #[derive(Debug, PartialEq)]
 pub struct ParkConfig {
-    people: i64,
-    park_capacity: i64,
-    number_of_games: usize,
-    games_cost: Vec<f64>
+    pub people: i64,
+    pub park_capacity: i64,
+    pub number_of_games: usize,
+    pub games_cost: Vec<f64>
 }
 
 pub fn read_configuration(path: &str) -> ParkConfig {

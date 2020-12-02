@@ -2,6 +2,7 @@ use std::{thread, time};
 use std::sync::{Arc, RwLock};
 use crate::config::ParkConfig;
 mod cashier;
+mod game;
 
 static CASHIER_INTERVAL: u64 = 2;
 static MSG_ERROR_CASH_W: &str = "Error writing cash.";
@@ -27,9 +28,28 @@ impl Park {
         (lock_cash, c_thread)
     }
 
+    fn initialize_game(&mut self, a_lock: std::sync::Arc<std::sync::RwLock<bool>>, number: usize)
+    -> std::thread::JoinHandle<()> {
+        let cost = self.park_config.games_cost[number];
+        let g_thread = thread::spawn(move || {
+            let mut game = game::Game{duration: time::Duration::from_secs(CASHIER_INTERVAL),
+                                      cost: cost,
+                                      lock_park_is_open: a_lock};
+            game.switch_on();
+        });
+        g_thread
+    }
+
     pub fn open(&mut self){
         let lock_is_open = Arc::new(RwLock::new(self.is_open));
+        let mut games = Vec::new();
+
+        //Inicio de caja
         let (lock_cash, c_thread) = self.initialize_cashier(lock_is_open.clone());
+        //Inicio de juegos
+        for i in 0..self.park_config.number_of_games {
+            games.push(self.initialize_game(lock_is_open.clone(), i));
+        }
 
         //Simulo movimiento en caja para ver que funcione el cajero
         {
@@ -40,6 +60,9 @@ impl Park {
             *is_open = false;
         }
 
+        for game in games {
+            game.join().unwrap();
+        }
         c_thread.join().unwrap();
     }
     
