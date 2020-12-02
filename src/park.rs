@@ -6,6 +6,7 @@ mod game;
 
 static CASHIER_INTERVAL: u64 = 2;
 static GAME_DURATION: u64 = 1;
+static GAME_FLAW_PROB: f64 = 0.3;
 static MSG_ERROR_OPEN_W: &str = "Error writing park state.";
 static MSG_ERROR_JOIN: &str = "Error joining thread.";
 
@@ -36,7 +37,8 @@ impl Park {
             let mut game = game::Game{mutex_cash: c_mutex,
                                       duration: time::Duration::from_secs(GAME_DURATION),
                                       cost: cost,
-                                      lock_park_is_open: o_lock};
+                                      lock_park_is_open: o_lock,
+                                      flaw_prob: GAME_FLAW_PROB};
             game.switch_on();
         });
         g_thread
