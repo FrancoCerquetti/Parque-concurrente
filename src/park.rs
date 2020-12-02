@@ -5,6 +5,7 @@ mod cashier;
 mod game;
 
 static CASHIER_INTERVAL: u64 = 2;
+static GAME_DURATION: u64 = 1;
 static MSG_ERROR_CASH_W: &str = "Error writing cash.";
 static MSG_ERROR_OPEN_W: &str = "Error writing park state.";
 
@@ -32,7 +33,7 @@ impl Park {
     -> std::thread::JoinHandle<()> {
         let cost = self.park_config.games_cost[number];
         let g_thread = thread::spawn(move || {
-            let mut game = game::Game{duration: time::Duration::from_secs(CASHIER_INTERVAL),
+            let mut game = game::Game{duration: time::Duration::from_secs(GAME_DURATION),
                                       cost: cost,
                                       lock_park_is_open: a_lock};
             game.switch_on();
