@@ -1,5 +1,5 @@
 use std::{thread, time};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Mutex};
 use crate::config::ParkConfig;
 mod cashier;
 mod game;
@@ -16,26 +16,26 @@ pub struct Park {
 }
 
 impl Park {
-    fn initialize_cashier(&mut self, a_lock: std::sync::Arc<std::sync::RwLock<bool>>)
-     -> (std::sync::Arc<std::sync::RwLock<f32>>, std::thread::JoinHandle<()>){
-        let lock_cash = Arc::new(RwLock::new(self.cash));
-        let c_lock = lock_cash.clone();
+    fn initialize_cashier(&mut self, o_lock: std::sync::Arc<std::sync::RwLock<bool>>)
+     -> (std::sync::Arc<std::sync::Mutex<f32>>, std::thread::JoinHandle<()>){
+        let mutex_cash = Arc::new(Mutex::new(self.cash));
+        let c_mutex = mutex_cash.clone();
         let c_thread = thread::spawn(move || {
             let mut cashier = cashier::Cashier{interval: time::Duration::from_secs(CASHIER_INTERVAL),
-                                            lock_cash: c_lock,
-                                            lock_park_is_open: a_lock};
+                                            mutex_cash: c_mutex,
+                                            lock_park_is_open: o_lock};
             cashier.iniciar();
         });
-        (lock_cash, c_thread)
+        (mutex_cash, c_thread)
     }
 
-    fn initialize_game(&mut self, a_lock: std::sync::Arc<std::sync::RwLock<bool>>, number: usize)
+    fn initialize_game(&mut self, o_lock: std::sync::Arc<std::sync::RwLock<bool>>, number: usize)
     -> std::thread::JoinHandle<()> {
         let cost = self.park_config.games_cost[number];
         let g_thread = thread::spawn(move || {
             let mut game = game::Game{duration: time::Duration::from_secs(GAME_DURATION),
                                       cost: cost,
-                                      lock_park_is_open: a_lock};
+                                      lock_park_is_open: o_lock};
             game.switch_on();
         });
         g_thread
@@ -46,7 +46,7 @@ impl Park {
         let mut games = Vec::new();
 
         //Inicio de caja
-        let (lock_cash, c_thread) = self.initialize_cashier(lock_is_open.clone());
+        let (mutex_cash, c_thread) = self.initialize_cashier(lock_is_open.clone());
         //Inicio de juegos
         for i in 0..self.park_config.number_of_games {
             games.push(self.initialize_game(lock_is_open.clone(), i));
@@ -55,7 +55,7 @@ impl Park {
         //Simulo movimiento en caja para ver que funcione el cajero
         {
             thread::sleep(time::Duration::from_secs(6));
-            let mut cash = lock_cash.write().expect(MSG_ERROR_CASH_W);
+            let mut cash = mutex_cash.lock().expect(MSG_ERROR_CASH_W);
             *cash = 1.0;
             let mut is_open = lock_is_open.write().expect(MSG_ERROR_OPEN_W);
             *is_open = false;
