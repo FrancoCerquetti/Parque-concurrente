@@ -6,8 +6,8 @@ mod game;
 
 static CASHIER_INTERVAL: u64 = 2;
 static GAME_DURATION: u64 = 1;
-static MSG_ERROR_CASH_W: &str = "Error writing cash.";
 static MSG_ERROR_OPEN_W: &str = "Error writing park state.";
+static MSG_ERROR_JOIN: &str = "Error joining thread.";
 
 pub struct Park {
     pub cash: f32,
@@ -29,11 +29,12 @@ impl Park {
         (mutex_cash, c_thread)
     }
 
-    fn initialize_game(&mut self, o_lock: std::sync::Arc<std::sync::RwLock<bool>>, number: usize)
-    -> std::thread::JoinHandle<()> {
+    fn initialize_game(&mut self, o_lock: std::sync::Arc<std::sync::RwLock<bool>>, number: usize,
+    c_mutex: std::sync::Arc<std::sync::Mutex<f32>>)-> std::thread::JoinHandle<()> {
         let cost = self.park_config.games_cost[number];
         let g_thread = thread::spawn(move || {
-            let mut game = game::Game{duration: time::Duration::from_secs(GAME_DURATION),
+            let mut game = game::Game{mutex_cash: c_mutex,
+                                      duration: time::Duration::from_secs(GAME_DURATION),
                                       cost: cost,
                                       lock_park_is_open: o_lock};
             game.switch_on();
@@ -49,22 +50,20 @@ impl Park {
         let (mutex_cash, c_thread) = self.initialize_cashier(lock_is_open.clone());
         //Inicio de juegos
         for i in 0..self.park_config.number_of_games {
-            games.push(self.initialize_game(lock_is_open.clone(), i));
+            games.push(self.initialize_game(lock_is_open.clone(), i, mutex_cash.clone()));
         }
 
-        //Simulo movimiento en caja para ver que funcione el cajero
+        //Duermo un rato para que se mueva la caja y cierro el parque
+        thread::sleep(time::Duration::from_secs(6));
         {
-            thread::sleep(time::Duration::from_secs(6));
-            let mut cash = mutex_cash.lock().expect(MSG_ERROR_CASH_W);
-            *cash = 1.0;
             let mut is_open = lock_is_open.write().expect(MSG_ERROR_OPEN_W);
             *is_open = false;
         }
 
         for game in games {
-            game.join().unwrap();
+            game.join().expect(MSG_ERROR_JOIN);
         }
-        c_thread.join().unwrap();
+        c_thread.join().expect(MSG_ERROR_JOIN);
     }
     
 }
