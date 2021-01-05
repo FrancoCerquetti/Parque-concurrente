@@ -1,6 +1,6 @@
 park:
     people: 5
-    capacity: 10
+    capacity: 2
     games-cost:
         - 1.0
         - 2.0
