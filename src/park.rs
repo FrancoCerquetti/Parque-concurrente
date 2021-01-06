@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock, Mutex};
 use crate::config::ParkConfig;
 mod cashier;
 mod game;
+use crate::customer::Customer;
 
 static CASHIER_INTERVAL: u64 = 2;
 static GAME_DURATION: u64 = 1;
@@ -29,20 +30,6 @@ impl Park {
             games_threads: None,
             cashier_thread: None,
             cash_mutex: None
-        }
-    }
-
-    pub fn simulate_customer(&mut self, num: i64) {
-        // thread::sleep(time::Duration::from_secs(2));
-        println!("Sim {} start", num);
-        // if let Some(mutex) = self.cash_mutex.take() {
-        match &self.cash_mutex {
-            None => println!("{}", MSG_ERROR_NONE_CASH),
-            Some(mutex) => {
-                let mut cash = mutex.lock().unwrap();
-                *cash += 10.0;
-                println!("Sim {}, {}", num, cash);
-            },
         }
     }
 
@@ -74,6 +61,19 @@ impl Park {
             game.switch_on();
         });
         g_thread
+    }
+
+    pub fn send_in(&mut self, customer: &&mut Customer, _number: usize){
+        // thread::sleep(time::Duration::from_secs(2));
+        println!("Sim {} start", customer.id);
+        match &self.cash_mutex {
+            None => println!("{}", MSG_ERROR_NONE_CASH),
+            Some(mutex) => {
+                let mut cash = mutex.lock().unwrap();
+                *cash += 10.0;
+                println!("Sim {}, {}", customer.id, cash);
+            },
+        }
     }
 
     pub fn open(&mut self){

@@ -34,9 +34,9 @@ impl Game {
             // let mut cash = self.mutex_cash.lock().expect(MSG_ERROR_CASH_W);
             // *cash += 1.0;
 
-            // println!("End of game: {:?}", thread::current().id());
+            println!("End of game: {:?}", thread::current().id());
         }
 
-        // println!("Game closed: {:?}", thread::current().id());
+        println!("Game closed: {:?}", thread::current().id());
     }
 }

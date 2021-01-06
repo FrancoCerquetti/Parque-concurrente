@@ -1,15 +1,16 @@
 use std::thread;
-use std_semaphore::Semaphore;
+// use std_semaphore::Semaphore;
 use std::sync::{Arc, Mutex};
 mod config;
 mod park;
+mod customer;
 
 fn main() {
     let park_config = config::read_configuration("./config/config.yml");
     println!("{:?}", park_config);
     
-    let capacity = park_config.park_capacity as isize;
-    let customer_sem = Arc::new(Semaphore::new(capacity));
+    //let capacity = park_config.park_capacity as isize;
+    // let customer_sem = Arc::new(Semaphore::new(capacity));
     let people = park_config.people;
 
     let park = park::Park::new(0.0, park_config);
@@ -18,13 +19,18 @@ fn main() {
 
     // Cola de ingreso de clientes
     let mut customers = Vec::new();
-    for customer in 0..people {
-        let customer_sem_clone = customer_sem.clone();
+    for i in 0..people {
+        // let customer_sem_clone = customer_sem.clone();
         let park_clone = park_ref.clone();
         let handle = thread::spawn(move || { 
-            let _guard = customer_sem_clone.access();
-            println!("Customer {} enters the park", customer);
-            park_clone.lock().unwrap().simulate_customer(customer);
+            // let _guard = customer_sem_clone.access();
+            println!("Customer {} enters the park", i);
+            let mut customer = customer::Customer {
+                id: i,
+                mutex_park: park_clone,
+            };
+            
+            customer.start();
         });
 
         customers.push(handle);
