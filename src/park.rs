@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock, Mutex};
 use crate::config::ParkConfig;
 mod cashier;
 mod game;
+mod customer;
 
 static CASHIER_INTERVAL: u64 = 2;
 static GAME_DURATION: u64 = 1;
@@ -44,18 +45,34 @@ impl Park {
         g_thread
     }
 
+    fn initialize_customer(&mut self, number: i64,
+        c_mutex: std::sync::Arc<std::sync::Mutex<f32>>)-> std::thread::JoinHandle<()> {
+        let c_thread = thread::spawn(move || {
+            let mut customer = customer::Customer{
+                id: number,
+                mutex_cash: c_mutex,
+            };
+            customer.enter_game();
+        });
+        c_thread
+    }
+    
     pub fn open(&mut self){
         let lock_is_open = Arc::new(RwLock::new(self.is_open));
         let mut games = Vec::new();
-
+        let mut customers = Vec::new();
+        
         //Inicio de caja
         let (mutex_cash, c_thread) = self.initialize_cashier(lock_is_open.clone());
         //Inicio de juegos
         for i in 0..self.park_config.number_of_games {
             games.push(self.initialize_game(lock_is_open.clone(), i, mutex_cash.clone()));
         }
+        //Inicio de clientes
+        for i in 0..self.park_config.people {
+            customers.push(self.initialize_customer(i, mutex_cash.clone()));
+        }
 
-        //Duermo un rato para que se mueva la caja y cierro el parque
         thread::sleep(time::Duration::from_secs(6));
         {
             let mut is_open = lock_is_open.write().expect(MSG_ERROR_OPEN_W);

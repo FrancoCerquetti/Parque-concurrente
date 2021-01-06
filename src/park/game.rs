@@ -1,7 +1,7 @@
 use std::{thread, time};
 use rand::prelude::*;
 static MSG_ERROR_OPEN_R: &str = "Error reading park state.";
-static MSG_ERROR_CASH_W: &str = "Error writing cash.";
+//static MSG_ERROR_CASH_W: &str = "Error writing cash.";
 static REPAIR_TIME: u64 = 2;
 
 pub struct Game {
@@ -30,8 +30,8 @@ impl Game {
             thread::sleep(self.duration);
 
             //Simulo clientes que pagan
-            let mut cash = self.mutex_cash.lock().expect(MSG_ERROR_CASH_W);
-            *cash += 1.0;
+            //let mut cash = self.mutex_cash.lock().expect(MSG_ERROR_CASH_W);
+            //*cash += 1.0;
 
             println!("End of game: {:?}", thread::current().id());
         }
