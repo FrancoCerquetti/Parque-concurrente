@@ -28,6 +28,7 @@ fn main() {
             let mut customer = customer::Customer {
                 id: i,
                 mutex_park: park_clone,
+                cash: 30.0,
             };
             
             customer.start();

@@ -63,7 +63,7 @@ impl Park {
         g_thread
     }
 
-    pub fn send_in(&mut self, customer: &&mut Customer, _number: usize){
+    pub fn send_in(&mut self, customer: &mut Customer, _game_number: usize){
         // thread::sleep(time::Duration::from_secs(2));
         println!("Sim {} start", customer.id);
         match &self.cash_mutex {
@@ -71,6 +71,7 @@ impl Park {
             Some(mutex) => {
                 let mut cash = mutex.lock().unwrap();
                 *cash += 10.0;
+                customer.pay(10.0);
                 println!("Sim {}, {}", customer.id, cash);
             },
         }
