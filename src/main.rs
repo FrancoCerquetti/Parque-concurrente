@@ -25,13 +25,9 @@ fn main() {
         let handle = thread::spawn(move || { 
             // let _guard = customer_sem_clone.access();
             println!("Customer {} enters the park", i);
-            let mut customer = customer::Customer {
-                id: i,
-                mutex_park: park_clone,
-                cash: 30.0,
-            };
+            let mut customer = customer::Customer::new(i, park_clone, 30.0);
             
-            customer.start();
+            customer.enter_park();
         });
 
         customers.push(handle);

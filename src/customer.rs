@@ -8,6 +8,15 @@ pub struct Customer {
 }
 
 impl Customer {
+    pub fn new(id: i64, mutex_park: std::sync::Arc<std::sync::Mutex<Park>>,
+    cash: f32) -> Customer {
+        Customer {
+            id: id,
+            mutex_park: mutex_park,
+            cash: cash,
+        }
+    }
+
     fn enter_game(&mut self){
         // cambiar el 1 por un numero random (para elegir el juego)
 
@@ -17,7 +26,7 @@ impl Customer {
         park.send_in(self, 1);
     }
 
-    pub fn start(&mut self){
+    pub fn enter_park(&mut self){
         // agregar caso en que no pueda pagar otra atracción
         while self.cash > 0.0{
             self.enter_game();
