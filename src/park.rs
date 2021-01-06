@@ -9,6 +9,7 @@ static GAME_DURATION: u64 = 1;
 static GAME_FLAW_PROB: f64 = 0.3;
 static MSG_ERROR_OPEN_W: &str = "Error writing park state.";
 static MSG_ERROR_JOIN: &str = "Error joining thread.";
+static MSG_ERROR_NONE_CASH: &str = "Error cash has a None value.";
 
 pub struct Park {
     cash: f32,
@@ -34,10 +35,14 @@ impl Park {
     pub fn simulate_customer(&mut self, num: i64) {
         // thread::sleep(time::Duration::from_secs(2));
         println!("Sim {} start", num);
-        if let Some(mutex) = self.cash_mutex.take() {
-            let mut cash = mutex.lock().unwrap();
-            *cash += 10.0;
-            println!("Sim {}, {}", num, cash);
+        // if let Some(mutex) = self.cash_mutex.take() {
+        match &self.cash_mutex {
+            None => println!("{}", MSG_ERROR_NONE_CASH),
+            Some(mutex) => {
+                let mut cash = mutex.lock().unwrap();
+                *cash += 10.0;
+                println!("Sim {}, {}", num, cash);
+            },
         }
     }
 

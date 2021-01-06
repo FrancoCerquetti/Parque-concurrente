@@ -2,7 +2,7 @@ use std::{thread, time};
 use rand::prelude::*;
 use std::sync::{Arc, Mutex, RwLock};
 static MSG_ERROR_OPEN_R: &str = "Error reading park state.";
-static MSG_ERROR_CASH_W: &str = "Error writing cash.";
+//static MSG_ERROR_CASH_W: &str = "Error writing cash.";
 static REPAIR_TIME: u64 = 2;
 
 pub struct Game {
