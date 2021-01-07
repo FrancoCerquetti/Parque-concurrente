@@ -28,6 +28,7 @@ impl Game {
         while *self.lock_park_is_open.read().expect(MSG_ERROR_OPEN_R) {
             if self.have_flaw(){
                 //Duermo mientras me reparo
+                println!("Repairing game {}", self.id);
                 thread::sleep(time::Duration::from_secs(REPAIR_TIME));
             }
 

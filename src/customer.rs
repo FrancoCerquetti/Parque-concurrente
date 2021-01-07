@@ -24,26 +24,28 @@ impl Customer {
     }
 
     fn enter_game(&mut self){
-        // cambiar el 1 por un numero random (para elegir el juego)
+        // TODO: cambiar el 1 por un numero random (para elegir el juego)
 
+        //Subo al juego
         // Uso un clon porque sino no puedo modificar el cash del customer
         {
             let park_c = self.mutex_park.clone();
             let mut park = park_c.lock().expect(MSG_ERROR_PARK_LOCK);
-            park.send_in(self, 1);
+            park.add_to_entrance_queue(self, 1);
         }
         self.entrance_semaphore.acquire();
         
+        //Bajo del juego
         {
             let park_c = self.mutex_park.clone();
             let mut park = park_c.lock().expect(MSG_ERROR_PARK_LOCK);
-            park.send_out(self, 1);
+            park.add_to_exit_queue(self, 1);
         }
         self.exit_semaphore.acquire();
     }
 
     pub fn enter_park(&mut self){
-        // agregar caso en que no pueda pagar otra atracción
+        // TODO: agregar caso en que no pueda pagar otra atracción
         while self.cash > 0.0{
             self.enter_game();
         }

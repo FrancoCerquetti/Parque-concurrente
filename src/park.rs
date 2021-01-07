@@ -57,9 +57,7 @@ impl Park {
     }
 
     fn initialize_game(&mut self, o_lock: Arc<RwLock<bool>>, number: usize, c_mutex: Arc<Mutex<f32>>)
-    -> (std::sync::Arc<std::sync::Mutex<queues::Queue<std::sync::Arc<std_semaphore::Semaphore>>>>, 
-    std::sync::Arc<std::sync::Mutex<queues::Queue<std::sync::Arc<std_semaphore::Semaphore>>>>, 
-    std::thread::JoinHandle<()>) {
+    -> (Arc<Mutex<Queue<Arc<Semaphore>>>>, Arc<Mutex<Queue<Arc<Semaphore>>>>, thread::JoinHandle<()>) {
         let entrance_queue: Queue<Arc<Semaphore>> = queue![];
         let exit_queue: Queue<Arc<Semaphore>> = queue![];
         let mutex_entrance_queue = Arc::new(Mutex::new(entrance_queue));
@@ -82,7 +80,7 @@ impl Park {
         (mutex_exit_queue, mutex_entrance_queue, g_thread)
     }
 
-    pub fn send_in(&mut self, customer: &mut Customer, game_number: usize){
+    pub fn add_to_entrance_queue(&mut self, customer: &mut Customer, game_number: usize){
         //Agrega al cliente a la cola
         match &self.games_entrance_queues {
             None => println!("{}", MSG_ERROR_NONE_GAMES_QUEUES),
@@ -94,6 +92,7 @@ impl Park {
         println!("Sim {} ENTERS game {}", customer.id, game_number);
         
         //Paga
+        // TODO: hacer que el juego cobre?
         match &self.cash_mutex {
             None => println!("{}", MSG_ERROR_NONE_CASH),
             Some(mutex) => {
@@ -104,7 +103,7 @@ impl Park {
         }
     }
 
-    pub fn send_out(&mut self, customer: &mut Customer, game_number: usize){
+    pub fn add_to_exit_queue(&mut self, customer: &mut Customer, game_number: usize){
         match &self.games_exit_queues {
             None => println!("{}", MSG_ERROR_NONE_GAMES_QUEUES),
             Some(games_exit_queues) => {
