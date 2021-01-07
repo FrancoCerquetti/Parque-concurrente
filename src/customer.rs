@@ -1,10 +1,14 @@
 use crate::park::Park;
+use std_semaphore::Semaphore;
+use std::sync::{Arc};
 static MSG_ERROR_PARK_LOCK: &str = "Error locking park.";
 
 pub struct Customer {
     pub id: i64,
     pub mutex_park: std::sync::Arc<std::sync::Mutex<Park>>,
     pub cash: f32,
+    pub entrance_semaphore: std::sync::Arc<std_semaphore::Semaphore>,
+    pub exit_semaphore: std::sync::Arc<std_semaphore::Semaphore>,
 }
 
 impl Customer {
@@ -14,6 +18,8 @@ impl Customer {
             id: id,
             mutex_park: mutex_park,
             cash: cash,
+            entrance_semaphore: Arc::new(Semaphore::new(0)),
+            exit_semaphore: Arc::new(Semaphore::new(0)),
         }
     }
 
@@ -23,6 +29,7 @@ impl Customer {
         // Uso un clon porque sino no puedo modificar el cash del customer
         let park_c = self.mutex_park.clone();
         let mut park = park_c.lock().expect(MSG_ERROR_PARK_LOCK);
+        println!("- Sim {} llama park.send_in", self.id);
         park.send_in(self, 1);
     }
 
