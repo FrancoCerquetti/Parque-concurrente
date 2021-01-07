@@ -27,10 +27,19 @@ impl Customer {
         // cambiar el 1 por un numero random (para elegir el juego)
 
         // Uso un clon porque sino no puedo modificar el cash del customer
-        let park_c = self.mutex_park.clone();
-        let mut park = park_c.lock().expect(MSG_ERROR_PARK_LOCK);
-        println!("- Sim {} llama park.send_in", self.id);
-        park.send_in(self, 1);
+        {
+            let park_c = self.mutex_park.clone();
+            let mut park = park_c.lock().expect(MSG_ERROR_PARK_LOCK);
+            park.send_in(self, 1);
+        }
+        self.entrance_semaphore.acquire();
+        
+        {
+            let park_c = self.mutex_park.clone();
+            let mut park = park_c.lock().expect(MSG_ERROR_PARK_LOCK);
+            park.send_out(self, 1);
+        }
+        self.exit_semaphore.acquire();
     }
 
     pub fn enter_park(&mut self){

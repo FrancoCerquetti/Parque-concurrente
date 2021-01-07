@@ -83,38 +83,36 @@ impl Park {
     }
 
     pub fn send_in(&mut self, customer: &mut Customer, game_number: usize){
-        // thread::sleep(time::Duration::from_secs(2));
-        println!("Sim {} start", customer.id);
+        //Agrega al cliente a la cola
+        match &self.games_entrance_queues {
+            None => println!("{}", MSG_ERROR_NONE_GAMES_QUEUES),
+            Some(games_entrance_queues) => {
+                let mut queue = games_entrance_queues[game_number].lock().unwrap();
+                (*queue).add(customer.entrance_semaphore.clone());
+            }
+        }
+        println!("Sim {} ENTERS game {}", customer.id, game_number);
+        
+        //Paga
         match &self.cash_mutex {
             None => println!("{}", MSG_ERROR_NONE_CASH),
             Some(mutex) => {
-                println!("QUIERE JUGAR");
-                match &self.games_entrance_queues {
-                    None => println!("{}", MSG_ERROR_NONE_GAMES_QUEUES),
-                    Some(games_entrance_queues) => {
-                        let mut queue = games_entrance_queues[game_number].lock().unwrap();
-                        (*queue).add(customer.entrance_semaphore.clone());
-                    }
-                }
-                customer.entrance_semaphore.acquire();
-                
-                println!("ENCONTRAMOS EL JUEGO");
                 let mut cash = mutex.lock().unwrap();
-                println!("PAGA");
                 *cash += 10.0;
                 customer.pay(10.0);
-
-                match &self.games_exit_queues {
-                    None => println!("{}", MSG_ERROR_NONE_GAMES_QUEUES),
-                    Some(games_exit_queues) => {
-                        let mut queue = games_exit_queues[game_number].lock().unwrap();
-                        (*queue).add(customer.exit_semaphore.clone());
-                    }
-                }
-                customer.exit_semaphore.acquire();
-                println!("Sim {} gets on game number {}. Cash new value: {}", customer.id, game_number, cash);
-            },
+            }
         }
+    }
+
+    pub fn send_out(&mut self, customer: &mut Customer, game_number: usize){
+        match &self.games_exit_queues {
+            None => println!("{}", MSG_ERROR_NONE_GAMES_QUEUES),
+            Some(games_exit_queues) => {
+                let mut queue = games_exit_queues[game_number].lock().unwrap();
+                (*queue).add(customer.exit_semaphore.clone());
+            }
+        }
+        println!("Sim {} EXITS game {}", customer.id, game_number);
     }
 
     pub fn open(&mut self){
