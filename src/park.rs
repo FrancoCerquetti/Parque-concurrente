@@ -1,10 +1,11 @@
 use std::{thread, time};
 use std::sync::{Arc, RwLock, Mutex};
+//use std_semaphore::Semaphore;
 use crate::config::ParkConfig;
-mod cashier;
-mod game;
+use crate::game_administrator::GameAdministrator;
+use crate::cashier::Cashier;
+use crate::game::Game;
 use crate::customer::Customer;
-use std_semaphore::Semaphore;
 extern crate queues;
 use queues::*;
 
@@ -15,15 +16,15 @@ static MSG_ERROR_OPEN_W: &str = "Error writing park state.";
 static MSG_ERROR_JOIN: &str = "Error joining thread.";
 static MSG_ERROR_NONE_CASH: &str = "Error cash has a None value.";
 //static MSG_ERROR_GAME_LOCK: &str = "Error locking game.";
-static MSG_ERROR_NONE_GAMES_QUEUES: &str = "Error games queues hace None value.";
+//static MSG_ERROR_NONE_GAMES_QUEUES: &str = "Error games queues hace None value.";
 
 pub struct Park {
     cash: f32,
     park_config: ParkConfig,
+    // TODO: hacer lock_is_open un condvar?
     lock_is_open: Arc<RwLock<bool>>,
     games_threads: Option<Vec<thread::JoinHandle<()>>>,
-    games_entrance_queues: Option<Vec<Arc<Mutex<Queue<Arc<Semaphore>>>>>>,
-    games_exit_queues: Option<Vec<Arc<Mutex<Queue<Arc<Semaphore>>>>>>,
+    game_administrators: Vec<GameAdministrator>,
     cashier_thread: Option<thread::JoinHandle<()>>,
     cash_mutex: Option<Arc::<Mutex<f32>>>
 }
@@ -35,8 +36,7 @@ impl Park {
             park_config: park_config,
             lock_is_open: Arc::new(RwLock::new(false)),
             games_threads: None,
-            games_entrance_queues: None,
-            games_exit_queues: None,
+            game_administrators: Vec::new(),
             cashier_thread: None,
             cash_mutex: None
         }
@@ -46,7 +46,7 @@ impl Park {
         let mutex_cash = Arc::new(Mutex::new(self.cash));
         let c_mutex = mutex_cash.clone();
         let c_thread = thread::spawn(move || {
-            let mut cashier = cashier::Cashier {
+            let mut cashier = Cashier {
                 interval: time::Duration::from_secs(CASHIER_INTERVAL),
                 mutex_cash: c_mutex,
                 lock_park_is_open: o_lock
@@ -57,38 +57,27 @@ impl Park {
     }
 
     fn initialize_game(&mut self, o_lock: Arc<RwLock<bool>>, number: usize, c_mutex: Arc<Mutex<f32>>)
-    -> (Arc<Mutex<Queue<Arc<Semaphore>>>>, Arc<Mutex<Queue<Arc<Semaphore>>>>, thread::JoinHandle<()>) {
-        let entrance_queue: Queue<Arc<Semaphore>> = queue![];
-        let exit_queue: Queue<Arc<Semaphore>> = queue![];
-        let mutex_entrance_queue = Arc::new(Mutex::new(entrance_queue));
-        let mutex_exit_queue = Arc::new(Mutex::new(exit_queue));
-        let entrance_q_mutex = mutex_entrance_queue.clone();
-        let exit_q_mutex = mutex_exit_queue.clone();
-
+    -> (GameAdministrator, thread::JoinHandle<()>) {
         let cost = self.park_config.games_cost[number];
-        let g_thread = thread::spawn(move || {
-            let mut game = game::Game {
-                id: number,
-                mutex_cash: c_mutex,
-                duration: time::Duration::from_secs(GAME_DURATION),
-                cost: cost,
-                lock_park_is_open: o_lock,
-                flaw_prob: GAME_FLAW_PROB
-            };
-            game.switch_on(entrance_q_mutex, exit_q_mutex);
-        });
-        (mutex_exit_queue, mutex_entrance_queue, g_thread)
+        let game = Game {
+            id: number,
+            duration: time::Duration::from_secs(GAME_DURATION),
+            lock_park_is_open: o_lock,
+            flaw_prob: GAME_FLAW_PROB,
+        };
+        let mut admin = GameAdministrator::new(game, cost, c_mutex);
+        let a_thread = admin.switch_game_on();
+        (admin, a_thread)
     }
+
+    // pub fn can_afford_a_ride(cash: f32) -> bool {
+    //     true
+    // }
 
     pub fn add_to_entrance_queue(&mut self, customer: &mut Customer, game_number: usize){
         //Agrega al cliente a la cola
-        match &self.games_entrance_queues {
-            None => println!("{}", MSG_ERROR_NONE_GAMES_QUEUES),
-            Some(games_entrance_queues) => {
-                let mut queue = games_entrance_queues[game_number].lock().unwrap();
-                (*queue).add(customer.entrance_semaphore.clone());
-            }
-        }
+        let mut queue = self.game_administrators[game_number].entrance_queue.lock().unwrap();
+        (*queue).add(customer.entrance_semaphore.clone());
         println!("Sim {} ENTERS game {}", customer.id, game_number);
         
         //Paga
@@ -104,13 +93,8 @@ impl Park {
     }
 
     pub fn add_to_exit_queue(&mut self, customer: &mut Customer, game_number: usize){
-        match &self.games_exit_queues {
-            None => println!("{}", MSG_ERROR_NONE_GAMES_QUEUES),
-            Some(games_exit_queues) => {
-                let mut queue = games_exit_queues[game_number].lock().unwrap();
-                (*queue).add(customer.exit_semaphore.clone());
-            }
-        }
+        let mut queue = self.game_administrators[game_number].exit_queue.lock().unwrap();
+        (*queue).add(customer.exit_semaphore.clone());
         println!("Sim {} EXITS game {}", customer.id, game_number);
     }
 
@@ -127,17 +111,12 @@ impl Park {
         
         //Inicio de juegos
         let mut games_threads = Vec::new();
-        let mut games_entrance_queues = Vec::new();
-        let mut games_exit_queues = Vec::new();
         for i in 0..self.park_config.number_of_games {
-            let (entrance_q_mutex, exit_q_mutex, g_thread) = self.initialize_game(self.lock_is_open.clone(), i, mutex_cash.clone());
+            let (admin, g_thread) = self.initialize_game(self.lock_is_open.clone(), i, mutex_cash.clone());
             games_threads.push(g_thread);
-            games_entrance_queues.push(entrance_q_mutex);
-            games_exit_queues.push(exit_q_mutex);
+            self.game_administrators.push(admin);
         }
         self.games_threads = Some(games_threads);
-        self.games_entrance_queues = Some(games_entrance_queues);
-        self.games_exit_queues = Some(games_exit_queues);
     }
     
     pub fn close(&mut self) {

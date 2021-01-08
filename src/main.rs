@@ -1,9 +1,9 @@
 use std::thread;
 // use std_semaphore::Semaphore;
 use std::sync::{Arc, Mutex};
-mod config;
-mod park;
-mod customer;
+use parque_concurrente::config;
+use parque_concurrente::park;
+use parque_concurrente::customer;
 
 fn main() {
     let park_config = config::read_configuration("./config/config.yml");

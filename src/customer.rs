@@ -1,5 +1,5 @@
-use crate::park::Park;
 use std_semaphore::Semaphore;
+use crate::park::Park;
 use std::sync::{Arc};
 static MSG_ERROR_PARK_LOCK: &str = "Error locking park.";
 
@@ -28,8 +28,8 @@ impl Customer {
 
         //Subo al juego
         // Uso un clon porque sino no puedo modificar el cash del customer
+        let park_c = self.mutex_park.clone();
         {
-            let park_c = self.mutex_park.clone();
             let mut park = park_c.lock().expect(MSG_ERROR_PARK_LOCK);
             park.add_to_entrance_queue(self, 1);
         }
@@ -37,7 +37,6 @@ impl Customer {
         
         //Bajo del juego
         {
-            let park_c = self.mutex_park.clone();
             let mut park = park_c.lock().expect(MSG_ERROR_PARK_LOCK);
             park.add_to_exit_queue(self, 1);
         }
