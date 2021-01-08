@@ -4,17 +4,18 @@ use std::{thread};
 use std::sync::{Arc, Mutex};
 extern crate queues;
 use queues::*;
+use crate::customer::Customer;
 
 pub struct GameAdministrator {
     pub cost: f64,
-    pub mutex_cash: Arc<Mutex<f32>>,
+    pub mutex_cash: Arc<Mutex<f64>>,
     pub entrance_queue: Arc<Mutex<Queue<Arc<Semaphore>>>>,
     pub exit_queue: Arc<Mutex<Queue<Arc<Semaphore>>>>,
     pub game: Arc<Mutex<Game>>,
 }
 
 impl GameAdministrator {
-    pub fn new(game: Game, cost: f64, mutex_cash: Arc<Mutex<f32>>) -> GameAdministrator{
+    pub fn new(game: Game, cost: f64, mutex_cash: Arc<Mutex<f64>>) -> GameAdministrator{
         GameAdministrator {
             cost: cost,
             mutex_cash: mutex_cash,
@@ -22,6 +23,16 @@ impl GameAdministrator {
             exit_queue: Arc::new(Mutex::new(Queue::new())),
             game: Arc::new(Mutex::new(game)),
         }
+    }
+
+    pub fn is_affordable(&mut self, cash: f64) -> bool{
+        cash >= self.cost
+    }
+
+    pub fn charge(&mut self, customer: &mut Customer){
+        customer.pay(self.cost);
+        let mut cash = self.mutex_cash.lock().unwrap();
+        *cash += self.cost;
     }
 
     pub fn switch_game_on(&mut self) -> thread::JoinHandle<()>{

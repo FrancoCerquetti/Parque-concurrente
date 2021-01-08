@@ -17,20 +17,21 @@ static MSG_ERROR_JOIN: &str = "Error joining thread.";
 static MSG_ERROR_NONE_CASH: &str = "Error cash has a None value.";
 //static MSG_ERROR_GAME_LOCK: &str = "Error locking game.";
 //static MSG_ERROR_NONE_GAMES_QUEUES: &str = "Error games queues hace None value.";
+//TODO: reemplazar .unwrap por .expect
 
 pub struct Park {
-    cash: f32,
+    cash: f64,
     park_config: ParkConfig,
     // TODO: hacer lock_is_open un condvar?
     lock_is_open: Arc<RwLock<bool>>,
     games_threads: Option<Vec<thread::JoinHandle<()>>>,
     game_administrators: Vec<GameAdministrator>,
     cashier_thread: Option<thread::JoinHandle<()>>,
-    cash_mutex: Option<Arc::<Mutex<f32>>>
+    cash_mutex: Option<Arc::<Mutex<f64>>>
 }
 
 impl Park {
-    pub fn new(cash: f32, park_config: ParkConfig) -> Park {
+    pub fn new(cash: f64, park_config: ParkConfig) -> Park {
         Park {
             cash: cash, 
             park_config: park_config,
@@ -42,7 +43,7 @@ impl Park {
         }
     }
 
-    fn initialize_cashier(&mut self, o_lock: Arc<RwLock<bool>>) -> (Arc<Mutex<f32>>, thread::JoinHandle<()>) {
+    fn initialize_cashier(&mut self, o_lock: Arc<RwLock<bool>>) -> (Arc<Mutex<f64>>, thread::JoinHandle<()>) {
         let mutex_cash = Arc::new(Mutex::new(self.cash));
         let c_mutex = mutex_cash.clone();
         let c_thread = thread::spawn(move || {
@@ -56,7 +57,7 @@ impl Park {
         (mutex_cash, c_thread)
     }
 
-    fn initialize_game(&mut self, o_lock: Arc<RwLock<bool>>, number: usize, c_mutex: Arc<Mutex<f32>>)
+    fn initialize_game(&mut self, o_lock: Arc<RwLock<bool>>, number: usize, c_mutex: Arc<Mutex<f64>>)
     -> (GameAdministrator, thread::JoinHandle<()>) {
         let cost = self.park_config.games_cost[number];
         let game = Game {
@@ -70,32 +71,32 @@ impl Park {
         (admin, a_thread)
     }
 
-    // pub fn can_afford_a_ride(cash: f32) -> bool {
-    //     true
-    // }
-
     pub fn add_to_entrance_queue(&mut self, customer: &mut Customer, game_number: usize){
         //Agrega al cliente a la cola
-        let mut queue = self.game_administrators[game_number].entrance_queue.lock().unwrap();
-        (*queue).add(customer.entrance_semaphore.clone());
+        {
+            let mut queue = self.game_administrators[game_number].entrance_queue.lock().unwrap();
+            (*queue).add(customer.entrance_semaphore.clone());
+        }
         println!("Sim {} ENTERS game {}", customer.id, game_number);
         
         //Paga
         // TODO: hacer que el juego cobre?
-        match &self.cash_mutex {
-            None => println!("{}", MSG_ERROR_NONE_CASH),
-            Some(mutex) => {
-                let mut cash = mutex.lock().unwrap();
-                *cash += 10.0;
-                customer.pay(10.0);
-            }
-        }
+        self.game_administrators[game_number].charge(customer);
     }
 
     pub fn add_to_exit_queue(&mut self, customer: &mut Customer, game_number: usize){
         let mut queue = self.game_administrators[game_number].exit_queue.lock().unwrap();
         (*queue).add(customer.exit_semaphore.clone());
         println!("Sim {} EXITS game {}", customer.id, game_number);
+    }
+
+    pub fn affords_any_game(&mut self, cash: f64) -> bool{
+        for admin in &mut self.game_administrators {
+            if admin.is_affordable(cash.into()){
+                return true;
+            }
+        }
+        false
     }
 
     pub fn open(&mut self){

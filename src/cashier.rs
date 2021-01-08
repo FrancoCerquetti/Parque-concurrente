@@ -4,7 +4,7 @@ static MSG_ERROR_OPEN_R: &str = "Error reading park state.";
 
 pub struct Cashier {
     pub interval: time::Duration,
-    pub mutex_cash: std::sync::Arc<std::sync::Mutex<f32>>,
+    pub mutex_cash: std::sync::Arc<std::sync::Mutex<f64>>,
     pub lock_park_is_open: std::sync::Arc<std::sync::RwLock<bool>>
 }
 
