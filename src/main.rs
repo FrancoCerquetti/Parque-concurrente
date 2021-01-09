@@ -1,5 +1,4 @@
 use std::thread;
-// use std_semaphore::Semaphore;
 use std::sync::{Arc, Mutex};
 use parque_concurrente::config;
 use parque_concurrente::park::Park;

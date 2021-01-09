@@ -22,7 +22,6 @@ static MSG_ERROR_NONE_CASH: &str = "Error cash has a None value.";
 pub struct Park {
     cash: f64,
     park_config: ParkConfig,
-    // TODO: hacer lock_is_open un condvar?
     lock_is_open: Arc<RwLock<bool>>,
     games_threads: Option<Vec<thread::JoinHandle<()>>>,
     game_administrators: Vec<GameAdministrator>,

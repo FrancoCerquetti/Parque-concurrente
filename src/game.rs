@@ -5,7 +5,8 @@ extern crate queues;
 use queues::*;
 use std_semaphore::Semaphore;
 static MSG_ERROR_OPEN_R: &str = "Error reading park state.";
-//static MSG_ERROR_CASH_W: &str = "Error writing cash.";
+static MSG_ERROR_ENTRANCE_QUEUE: &str = "Error locking entrance queue.";
+static MSG_ERROR_EXIT_QUEUE: &str = "Error locking exit queue.";
 static REPAIR_TIME: u64 = 2;
 
 pub struct Game {
@@ -16,12 +17,15 @@ pub struct Game {
 }
 
 impl Game {
+    // Chequeo la probabilidad de falla
     fn have_flaw(&mut self) -> bool{
         let mut rng = rand::thread_rng();
         let y: f64 = rng.gen();
         y <= self.flaw_prob
     }
 
+    // Función para encender el juego, en la misma se repara en caso de falla, o libera los semáforos
+    // para permitir el ingreso de los clientes. El juego cierra cuando el parque cierra.
     pub fn switch_on(
         &mut self, 
         entrance_queue: Arc<Mutex<Queue<Arc<Semaphore>>>>,
@@ -35,22 +39,28 @@ impl Game {
                 println!("Finished repairing game {}", self.id);
             }
 
-            // Activo semaforos de entrada
-            if entrance_queue.lock().unwrap().size() != 0 {
-                match entrance_queue.lock().unwrap().remove() {
-                    Ok(semaphore) => semaphore.release(),
-                    Err(error) => println!("Error removing element from queue: {:?}", error),
+            {
+                // Activo semaforos de entrada
+                let mut queue = entrance_queue.lock().expect(MSG_ERROR_ENTRANCE_QUEUE);
+                if queue.size() != 0 {
+                    match queue.remove() {
+                        Ok(semaphore) => semaphore.release(),
+                        Err(error) => println!("Error removing element from entrance queue: {:?}", error),
+                    }
                 }
             }
 
             // Duermo mientras dure el juego
             thread::sleep(self.duration);
 
-            // Activo semaforos de salida
-            while exit_queue.lock().unwrap().size() != 0{
-                match exit_queue.lock().unwrap().remove() {
-                    Ok(semaphore) => semaphore.release(),
-                    Err(error) => println!("Error removing element from queue: {:?}", error),
+            {
+                // Activo semaforos de salida
+                let mut queue = exit_queue.lock().expect(MSG_ERROR_EXIT_QUEUE);
+                while queue.size() != 0 {
+                    match queue.remove() {
+                        Ok(semaphore) => semaphore.release(),
+                        Err(error) => println!("Error removing element from exit queue: {:?}", error),
+                    }
                 }
             }
         }

@@ -23,6 +23,8 @@ impl Customer {
         }
     }
 
+    // Elijo el juego de manera aleatoria, en caso de no tener dinero para el elegido, recorro los posibles juegos
+    // y me quedo con el primero que alcance a pagar.
     fn pick_game(&mut self) -> usize {
         let number_of_games = self.mutex_park.lock().expect(MSG_ERROR_PARK_LOCK).number_of_games();
         let mut rng = rand::thread_rng();
@@ -40,22 +42,20 @@ impl Customer {
         }
     }
 
+    // Entro al juego elegido y pago el costo al entrar a la cola del mismo.
     fn enter_game(&mut self){
-        // TODO: cambiar el 1 por un numero random (para elegir el juego)
-        // verificando que le alcance la plata para subir
         let park_c = self.mutex_park.clone();
-        
         let game_pick = self.pick_game();
         println!("Customer {} picks game {}", self.id, game_pick);
+       
         // Subo al juego
-        // Uso un clon porque sino no puedo modificar el cash del customer
         {
             let mut park = park_c.lock().expect(MSG_ERROR_PARK_LOCK);
             park.add_to_entrance_queue(self, game_pick);
         }
         
         self.entrance_semaphore.acquire();
-        println!("Customer {} ENTERS game {}", self.id, game_pick);
+        println!("Customer {} enters game {}", self.id, game_pick);
         
         // Bajo del juego
         {
@@ -63,11 +63,12 @@ impl Customer {
             park.add_to_exit_queue(self, game_pick);
         }
         self.exit_semaphore.acquire();
-        println!("Customer {} EXITS game {}", self.id, game_pick);
+        println!("Customer {} exits game {}", self.id, game_pick);
     }
 
+    // Entro al parque, verificando que el semaforo de entrada esté disponible, en caso de estarlo,
+    // entro a los diferentes juegos hasta que me alcance el dinero, cuando ya no puedo pagar ningún juego, salgo.
     pub fn enter_park(&mut self) {
-        // TODO - Semaphore para limitar gente dentro del parque
         let entrance_sem = self.mutex_park.lock().expect(MSG_ERROR_PARK_LOCK).park_entrance_semaphore.clone();
         entrance_sem.acquire();
         println!("Customer {} enters park", self.id);
@@ -78,6 +79,7 @@ impl Customer {
         println!("Customer {} exits park", self.id);
     }
 
+    // Pago el monto correspondiente
     pub fn pay(&mut self, num: f64){
         self.cash -= num;
         println!("Customer {} pays {}, current cash {}", self.id, num, self.cash);

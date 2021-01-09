@@ -25,16 +25,19 @@ impl GameAdministrator {
         }
     }
 
+    // Veo si el dinero pasado por parámetro alcanza para pagar el juego
     pub fn is_affordable(&mut self, cash: f64) -> bool{
         cash >= self.cost
     }
 
+    // Le cobro al cliente el precio del juego
     pub fn charge(&mut self, customer: &mut Customer){
         customer.pay(self.cost);
         let mut cash = self.mutex_cash.lock().unwrap();
         *cash += self.cost;
     }
 
+    // Enciendo el juego, creando un thread para el juego que administro.
     pub fn switch_game_on(&mut self) -> thread::JoinHandle<()>{
         let game = self.game.clone();
         let entrance_queue = self.entrance_queue.clone();
