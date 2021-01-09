@@ -1,6 +1,6 @@
 use std::{thread, time};
 use std::sync::{Arc, RwLock, Mutex};
-//use std_semaphore::Semaphore;
+use std_semaphore::Semaphore;
 use crate::config::ParkConfig;
 use crate::game_administrator::GameAdministrator;
 use crate::cashier::Cashier;
@@ -10,8 +10,8 @@ extern crate queues;
 use queues::*;
 
 static CASHIER_INTERVAL: u64 = 2;
-static GAME_DURATION: u64 = 1;
-static GAME_FLAW_PROB: f64 = 0.3;
+static GAME_DURATION: u64 = 2;
+static GAME_FLAW_PROB: f64 = 0.0;
 static MSG_ERROR_OPEN_W: &str = "Error writing park state.";
 static MSG_ERROR_JOIN: &str = "Error joining thread.";
 static MSG_ERROR_NONE_CASH: &str = "Error cash has a None value.";
@@ -27,11 +27,13 @@ pub struct Park {
     games_threads: Option<Vec<thread::JoinHandle<()>>>,
     game_administrators: Vec<GameAdministrator>,
     cashier_thread: Option<thread::JoinHandle<()>>,
-    cash_mutex: Option<Arc::<Mutex<f64>>>
+    cash_mutex: Option<Arc::<Mutex<f64>>>,
+    pub park_entrance_semaphore: Arc<Semaphore>
 }
 
 impl Park {
     pub fn new(cash: f64, park_config: ParkConfig) -> Park {
+        let park_capacity = park_config.park_capacity as isize;
         Park {
             cash: cash, 
             park_config: park_config,
@@ -39,7 +41,8 @@ impl Park {
             games_threads: None,
             game_administrators: Vec::new(),
             cashier_thread: None,
-            cash_mutex: None
+            cash_mutex: None,
+            park_entrance_semaphore: Arc::new(Semaphore::new(park_capacity))
         }
     }
 
@@ -77,8 +80,7 @@ impl Park {
             let mut queue = self.game_administrators[game_number].entrance_queue.lock().unwrap();
             (*queue).add(customer.entrance_semaphore.clone());
         }
-        println!("Sim {} ENTERS game {}", customer.id, game_number);
-        
+    
         //Paga
         // TODO: hacer que el juego cobre?
         self.game_administrators[game_number].charge(customer);
@@ -87,16 +89,23 @@ impl Park {
     pub fn add_to_exit_queue(&mut self, customer: &mut Customer, game_number: usize){
         let mut queue = self.game_administrators[game_number].exit_queue.lock().unwrap();
         (*queue).add(customer.exit_semaphore.clone());
-        println!("Sim {} EXITS game {}", customer.id, game_number);
     }
 
-    pub fn affords_any_game(&mut self, cash: f64) -> bool{
+    pub fn affords_any_game(&mut self, cash: f64) -> bool {
         for admin in &mut self.game_administrators {
             if admin.is_affordable(cash.into()){
                 return true;
             }
         }
         false
+    }
+
+    pub fn can_afford_game(&mut self, cash: f64, game: usize) -> bool {
+        return self.game_administrators[game].cost <= cash;
+    }
+
+    pub fn number_of_games(&mut self) -> usize {
+        return self.park_config.number_of_games;
     }
 
     pub fn open(&mut self){

@@ -22,34 +22,37 @@ impl Game {
         y <= self.flaw_prob
     }
 
-    pub fn switch_on(&mut self, entrance_queue: Arc<Mutex<Queue<Arc<Semaphore>>>>,
-    exit_queue: Arc<Mutex<Queue<Arc<Semaphore>>>>){
+    pub fn switch_on(
+        &mut self, 
+        entrance_queue: Arc<Mutex<Queue<Arc<Semaphore>>>>,
+        exit_queue: Arc<Mutex<Queue<Arc<Semaphore>>>>
+    ) {
         while *self.lock_park_is_open.read().expect(MSG_ERROR_OPEN_R) {
             if self.have_flaw(){
-                //Duermo mientras me reparo
+                // Duermo mientras el juego se repara
                 println!("Repairing game {}", self.id);
                 thread::sleep(time::Duration::from_secs(REPAIR_TIME));
+                println!("Finished repairing game {}", self.id);
             }
 
-            //Activo semaforos de entrada
-            while entrance_queue.lock().unwrap().size() != 0{
+            // Activo semaforos de entrada
+            if entrance_queue.lock().unwrap().size() != 0 {
                 match entrance_queue.lock().unwrap().remove() {
                     Ok(semaphore) => semaphore.release(),
                     Err(error) => println!("Error removing element from queue: {:?}", error),
                 }
             }
 
-            //Duermo mientras dure el juego
+            // Duermo mientras dure el juego
             thread::sleep(self.duration);
 
-            //Activo semaforos de salida
+            // Activo semaforos de salida
             while exit_queue.lock().unwrap().size() != 0{
                 match exit_queue.lock().unwrap().remove() {
                     Ok(semaphore) => semaphore.release(),
                     Err(error) => println!("Error removing element from queue: {:?}", error),
                 }
             }
-            println!("End of game: {:?}", thread::current().id());
         }
         println!("Game closed: {:?}", thread::current().id());
     }
