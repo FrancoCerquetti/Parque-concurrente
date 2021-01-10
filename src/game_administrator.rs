@@ -6,6 +6,9 @@ extern crate queues;
 use queues::*;
 use crate::customer::Customer;
 
+static MSG_ERROR_LOCK_CASH: &str = "Error locking cash.";
+static MSG_ERROR_LOCK_GAME: &str = "Error locking game.";
+
 pub struct GameAdministrator {
     pub cost: f64,
     pub mutex_cash: Arc<Mutex<f64>>,
@@ -33,7 +36,7 @@ impl GameAdministrator {
     // Le cobro al cliente el precio del juego
     pub fn charge(&mut self, customer: &mut Customer){
         customer.pay(self.cost);
-        let mut cash = self.mutex_cash.lock().unwrap();
+        let mut cash = self.mutex_cash.lock().expect(MSG_ERROR_LOCK_CASH);
         *cash += self.cost;
     }
 
@@ -43,7 +46,7 @@ impl GameAdministrator {
         let entrance_queue = self.entrance_queue.clone();
         let exit_queue = self.exit_queue.clone();
         let thread = thread::spawn(move || {
-            game.lock().unwrap().switch_on(entrance_queue, exit_queue)
+            game.lock().expect(MSG_ERROR_LOCK_GAME).switch_on(entrance_queue, exit_queue)
         });
         thread
     }

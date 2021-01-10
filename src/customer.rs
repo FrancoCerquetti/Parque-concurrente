@@ -8,8 +8,8 @@ pub struct Customer {
     pub id: i64,
     pub mutex_park: Arc<Mutex<Park>>,
     pub cash: f64,
-    pub entrance_semaphore: Arc<std_semaphore::Semaphore>,
-    pub exit_semaphore: Arc<std_semaphore::Semaphore>,
+    pub entrance_semaphore: Arc<Semaphore>,
+    pub exit_semaphore: Arc<Semaphore>,
 }
 
 impl Customer {

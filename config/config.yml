@@ -1,5 +1,6 @@
 park:
-    people: 2
+    customers: 2
+    customers-cash: 20.0
     capacity: 2
     games-cost:
         - 10.0
@@ -10,3 +11,4 @@ park:
         - 10.0
         - 20.0
         - 30.0
+    debug: false
