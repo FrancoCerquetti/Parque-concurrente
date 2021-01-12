@@ -1,11 +1,12 @@
 use std::{thread, time};
-use std::sync::{Arc, RwLock, Mutex};
+use std::sync::{Arc, RwLock};
 use std_semaphore::Semaphore;
 use crate::config::ParkConfig;
 use crate::game_administrator::GameAdministrator;
 use crate::cashier::Cashier;
 use crate::game::Game;
 use crate::customer::Customer;
+use crate::logger::debug;
 extern crate queues;
 use queues::*;
 
@@ -26,7 +27,7 @@ pub struct Park {
     games_threads: Option<Vec<thread::JoinHandle<()>>>,
     game_administrators: Vec<GameAdministrator>,
     cashier_thread: Option<thread::JoinHandle<()>>,
-    cash_mutex: Option<Arc::<Mutex<f64>>>,
+    cash_lock: Option<Arc::<RwLock<f64>>>,
     pub park_entrance_semaphore: Arc<Semaphore>
 }
 
@@ -40,28 +41,28 @@ impl Park {
             games_threads: None,
             game_administrators: Vec::new(),
             cashier_thread: None,
-            cash_mutex: None,
+            cash_lock: None,
             park_entrance_semaphore: Arc::new(Semaphore::new(park_capacity))
         }
     }
 
     // Inicializa el thread del cajero
-    fn initialize_cashier(&mut self, o_lock: Arc<RwLock<bool>>) -> (Arc<Mutex<f64>>, thread::JoinHandle<()>) {
-        let mutex_cash = Arc::new(Mutex::new(self.cash));
-        let c_mutex = mutex_cash.clone();
+    fn initialize_cashier(&mut self, o_lock: Arc<RwLock<bool>>) -> (Arc<RwLock<f64>>, thread::JoinHandle<()>) {
+        let cash_lock = Arc::new(RwLock::new(self.cash));
+        let cash_clone = cash_lock.clone();
         let c_thread = thread::spawn(move || {
             let mut cashier = Cashier {
                 interval: time::Duration::from_secs(CASHIER_INTERVAL),
-                mutex_cash: c_mutex,
+                cash_lock: cash_clone,
                 lock_park_is_open: o_lock
             };
             cashier.initialize();
         });
-        (mutex_cash, c_thread)
+        (cash_lock, c_thread)
     }
 
     // Inicializa el thread del admin del juego y el thread del juego, seteando las propiedades de cada juego
-    fn initialize_game(&mut self, o_lock: Arc<RwLock<bool>>, number: usize, c_mutex: Arc<Mutex<f64>>)
+    fn initialize_game(&mut self, o_lock: Arc<RwLock<bool>>, number: usize, cash_lock: Arc<RwLock<f64>>)
     -> (GameAdministrator, thread::JoinHandle<()>) {
         let cost = self.park_config.games_cost[number];
         let game = Game {
@@ -70,7 +71,7 @@ impl Park {
             lock_park_is_open: o_lock,
             flaw_prob: GAME_FLAW_PROB,
         };
-        let mut admin = GameAdministrator::new(game, cost, c_mutex);
+        let mut admin = GameAdministrator::new(game, cost, cash_lock);
         let a_thread = admin.switch_game_on();
         (admin, a_thread)
     }
@@ -79,29 +80,30 @@ impl Park {
     pub fn add_to_entrance_queue(&mut self, customer: &mut Customer, game_number: usize){
         //Agrega al cliente a la cola
         {
-            let mut queue = self.game_administrators[game_number].entrance_queue.lock().expect(MSG_ERROR_LOCK_ENTRANCE_QUEUE);
+            let mut queue = self.game_administrators[game_number].entrance_queue.write().expect(MSG_ERROR_LOCK_ENTRANCE_QUEUE);
             match (*queue).add(customer.entrance_semaphore.clone()) {
                 Ok(_) => (),
                 Err(_) => panic!(MSG_ERROR_ADD_ENTRANCE_QUEUE)
             }
         }
-    
+        debug(format!("Added customer {} to game {} entrace queue", customer.id, game_number));
         //Paga
         self.game_administrators[game_number].charge(customer);
     }
 
     // Agrega un cliente a la cola de salida del juego
     pub fn add_to_exit_queue(&mut self, customer: &mut Customer, game_number: usize){
-        let mut queue = self.game_administrators[game_number].exit_queue.lock().expect(MSG_ERROR_LOCK_EXIT_QUEUE);
+        let mut queue = self.game_administrators[game_number].exit_queue.write().expect(MSG_ERROR_LOCK_EXIT_QUEUE);
         match (*queue).add(customer.exit_semaphore.clone()) {
             Ok(_) => (),
             Err(_) => panic!(MSG_ERROR_ADD_EXIT_QUEUE)
         }
+        debug(format!("Added customer {} to game {} exit queue", customer.id, game_number));
     }
 
     // Funcion para checkear la posibilidad de pagar algún juego del parque.
-    pub fn affords_any_game(&mut self, cash: f64) -> bool {
-        for admin in &mut self.game_administrators {
+    pub fn affords_any_game(&self, cash: f64) -> bool {
+        for admin in &self.game_administrators {
             if admin.is_affordable(cash.into()){
                 return true;
             }
@@ -110,12 +112,12 @@ impl Park {
     }
 
     // Funcion para checkear la posibilidad de pagar el juego con el id recibido por parámetro.
-    pub fn can_afford_game(&mut self, cash: f64, game: usize) -> bool {
+    pub fn can_afford_game(&self, cash: f64, game: usize) -> bool {
         return self.game_administrators[game].cost <= cash;
     }
 
     // Devuelve la cantidad de juegos del parque.
-    pub fn number_of_games(&mut self) -> usize {
+    pub fn number_of_games(&self) -> usize {
         return self.park_config.number_of_games;
     }
 
@@ -128,16 +130,18 @@ impl Park {
         }
 
         //Inicio de caja
-        let (mutex_cash, c_thread) = self.initialize_cashier(self.lock_is_open.clone());
+        let (cash_lock, c_thread) = self.initialize_cashier(self.lock_is_open.clone());
         self.cashier_thread = Some(c_thread);
-        self.cash_mutex = Some(mutex_cash.clone());
+        self.cash_lock = Some(cash_lock.clone());
+        debug(String::from("Park cashier initialized correctly"));
         
         //Inicio de juegos
         let mut games_threads = Vec::new();
         for i in 0..self.park_config.number_of_games {
-            let (admin, g_thread) = self.initialize_game(self.lock_is_open.clone(), i, mutex_cash.clone());
+            let (admin, g_thread) = self.initialize_game(self.lock_is_open.clone(), i, cash_lock.clone());
             games_threads.push(g_thread);
             self.game_administrators.push(admin);
+            debug(format!("Game Admin. and Game {} initialized correctly", i));
         }
         self.games_threads = Some(games_threads);
     }
@@ -155,10 +159,12 @@ impl Park {
                 game.join().expect(MSG_ERROR_JOIN);
             }
         }
+        debug(String::from("Park games threads joined correctly"));
 
         // Espero por el cajero
         if let Some(handle) = self.cashier_thread.take() {
             handle.join().expect(MSG_ERROR_JOIN);
         }
+        debug(String::from("Park cashier thread joined correctly"));
     }
 }
