@@ -87,3 +87,34 @@ impl Customer {
         log(format!("Customer {} pays {}, current cash {}", self.id, num, self.cash));
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use crate::config;
+    use crate::park;
+    #[test]
+    
+    
+    fn pays_9_has_cash_9_less() {
+        
+        let park_config = config::read_configuration("./config/config.yml");
+        let mut park = Park::new(0.0, park_config);
+        let  park_ref = Arc::new(RwLock::new(park));
+      
+        debug(String::from("Park opened"));
+        let park_clone = park_ref.clone();
+        let customers_cash=20.0;
+        let pay_amount=9.0;
+        let mut customer = Customer::new(0, park_clone, customers_cash);
+        
+        customer.enter_park();
+        customer.pay(pay_amount);
+    
+        assert_eq!(customer.cash, 11.0);
+    }
+
+   
+}

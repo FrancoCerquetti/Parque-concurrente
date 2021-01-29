@@ -168,3 +168,65 @@ impl Park {
         debug(String::from("Park cashier thread joined correctly"));
     }
 }
+
+
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use crate::config;
+    #[test]
+    
+    
+    fn cash_not_enough_to_play() {
+        
+        let park_config = config::read_configuration("./config/config.yml");
+   
+        
+        let mut park = Park::new(0.0, park_config);
+        park.open();
+        let  cash=9.9;
+        let  game=1;
+        let expected=false;
+        let result = park.can_afford_game( cash, game);
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn cash_enough_to_play() {
+        
+        let park_config = config::read_configuration("./config/config.yml");
+   
+        
+        let mut park = Park::new(0.0, park_config);
+        park.open();
+        let  cash=10.0;
+        let  game=1;
+        let expected=true;
+        let result = park.can_afford_game( cash, game);
+
+        assert_eq!(result, expected);
+    }
+
+
+    #[test]
+    fn cash_enough_to_play_a_game() {
+        
+        let park_config = config::read_configuration("./config/config.yml");
+   
+        
+        let mut park = Park::new(0.0, park_config);
+        park.open();
+        let  cash=10.0;
+        
+        let expected=true;
+        let result = park.affords_any_game( cash);
+
+        assert_eq!(result, expected);
+    }
+
+
+   
+}
