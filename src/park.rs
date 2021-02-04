@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn cash_enough_to_play() {
+    fn cash_enough_to_play_game_1() {
         
         let park_config = config::read_configuration("./config/config.yml");
    

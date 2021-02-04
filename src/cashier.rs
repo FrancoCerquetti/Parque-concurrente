@@ -21,3 +21,4 @@ impl Cashier {
         log(format!("Cash final value: {:?}", *cash));
     }
 }
+
