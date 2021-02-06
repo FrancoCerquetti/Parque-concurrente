@@ -21,7 +21,7 @@ static MSG_ERROR_LOCK_ENTRANCE_QUEUE: &str = "Error locking game entrance queue"
 static MSG_ERROR_LOCK_EXIT_QUEUE: &str = "Error locking game exit queue";
 
 pub struct Park {
-    cash: f64,
+    pub cash: f64,
     park_config: ParkConfig,
     lock_is_open: Arc<RwLock<bool>>,
     games_threads: Option<Vec<thread::JoinHandle<()>>>,
@@ -167,6 +167,18 @@ impl Park {
         }
         debug(String::from("Park cashier thread joined correctly"));
     }
+
+    pub fn get_cash(&self) -> f64 {
+        let mut total_cash=0.0;
+        //for game_administrator in game_administrators {
+            let admin=&self.game_administrators[0];
+            total_cash=admin.get_cash();
+            
+        //}
+         return total_cash;
+    }
+
+
 }
 
 
@@ -227,6 +239,7 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+   
 
    
 }
