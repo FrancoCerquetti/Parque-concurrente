@@ -56,7 +56,7 @@ impl GameAdministrator {
     }
 
     
-    // Devuelve la cantidad de juegos del parque.
+    // Devuelve la cantidad de dinero del parque.
     pub fn get_cash(&self) -> f64 {
         return *self.cash_lock.read().unwrap();
     }
@@ -73,27 +73,25 @@ mod tests {
    
     #[test] 
     fn charge_10_for_game_have_10_more() {
-        
         let park_config = config::read_configuration("./config/config.yml");
-        let  park = Park::new(0.0, park_config);
-        let  park_ref = Arc::new(RwLock::new(park));
-      
+        let park = Park::new(0.0, park_config);
+        let park_ref = Arc::new(RwLock::new(park));
         let park_clone = park_ref.clone();
-        let customers_cash=20.0;
+        let customers_cash = 20.0;
         let mut customer = Customer::new(0, park_clone, customers_cash);
         let game = Game {
             id:1,
-            duration:  time::Duration::from_secs(2),
+            duration: time::Duration::from_secs(2),
             lock_park_is_open: Arc::new(RwLock::new(true)),
-            flaw_prob:0.2,
+            flaw_prob: 0.2,
         };
-        let cost=10.0;
+        let cost = 10.0;
         let cash_lock = Arc::new(RwLock::new(100.0));
         let mut admin = GameAdministrator::new(game, cost, cash_lock);
 
         admin.charge(&mut customer);
-        let expected=110.0;
-        let result= admin.get_cash();
+        let expected = 110.0;
+        let result = admin.get_cash();
 
         assert_eq!(result, expected);
     }
