@@ -106,14 +106,13 @@ mod tests {
             lock_park_is_open: Arc::new(RwLock::new(true)),
             flaw_prob:0.2,
         };
-        let cost=20.0;
+        let cost = 20.0;
         let cash_lock = Arc::new(RwLock::new(10.0));
         let  admin = GameAdministrator::new(game, cost, cash_lock);
+        let expected = false;
+        let cash = 10.0;
 
-       
-        let expected=false;
-        let cash= admin.cash_lock.read().unwrap();
-        let result= admin.is_affordable(*cash);
+        let result = admin.is_affordable(cash);
 
         assert_eq!(result, expected);
     }

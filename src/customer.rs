@@ -104,7 +104,6 @@ mod tests {
         let  park = Park::new(0.0, park_config);
         let  park_ref = Arc::new(RwLock::new(park));
       
-        debug(String::from("Park opened"));
         let park_clone = park_ref.clone();
         let customers_cash=20.0;
         let pay_amount=9.0;
