@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 use std::thread;
 use std::sync::{Arc, RwLock};
 use parque_concurrente::config;

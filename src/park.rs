@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 use std::{thread, time};
 use std::sync::{Arc, RwLock};
 use std_semaphore::Semaphore;

@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 use std_semaphore::Semaphore;
 use crate::game::Game;
 use std::{thread};

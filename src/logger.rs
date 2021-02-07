@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 use std::sync::RwLock;
 use std::fs::{OpenOptions, File};
 use std::io::Write;
