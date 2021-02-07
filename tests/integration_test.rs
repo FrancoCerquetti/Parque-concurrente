@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 mod tests {
 
@@ -7,7 +6,7 @@ use std::sync::{Arc, RwLock};
 use parque_concurrente::config;
 use parque_concurrente::park::Park;
 use parque_concurrente::customer;
-use parque_concurrente::logger::{debug, init};
+use parque_concurrente::logger::init;
 
 static MSG_ERROR_LOCK_PARK: &str = "Error locking park.";
 static MSG_ERROR_JOIN_CUSTOMERS: &str = "Error trying to join customer threads";
@@ -42,14 +41,13 @@ fn customers_spend_40_park_ends_with_cash_40() {
         customers.push(handle);
     }
 
-   let mut  total_customer_cash=customers_amount as f64 * customers_cash;
+   let total_customer_cash=customers_amount as f64 * customers_cash;
    
 
     // Espero por los clientes
     for customer in customers {
        customer.join().expect(MSG_ERROR_JOIN_CUSTOMERS);
     }
-
    
  
     let park= park_ref.read().unwrap();

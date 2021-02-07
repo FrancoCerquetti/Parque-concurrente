@@ -19,6 +19,7 @@ static MSG_ERROR_ADD_ENTRANCE_QUEUE: &str = "Could not add customer to entrance 
 static MSG_ERROR_ADD_EXIT_QUEUE: &str = "Could not add customer to exit queue.";
 static MSG_ERROR_LOCK_ENTRANCE_QUEUE: &str = "Error locking game entrance queue";
 static MSG_ERROR_LOCK_EXIT_QUEUE: &str = "Error locking game exit queue";
+static MSG_ERROR_LOCK_CASH: &str = "Error locking cash.";
 
 pub struct Park {
     pub cash: f64,
@@ -168,16 +169,13 @@ impl Park {
         debug(String::from("Park cashier thread joined correctly"));
     }
 
+    // Devuelve la canridad de dinero que posee.
     pub fn get_cash(&self) -> f64 {
-        let mut total_cash=0.0;
-        //for game_administrator in game_administrators {
-            let admin=&self.game_administrators[0];
-            total_cash=admin.get_cash();
-            
-        //}
-         return total_cash;
+        match &self.cash_lock {
+            Some(cash_l) => *cash_l.read().expect(MSG_ERROR_LOCK_CASH),
+            None => 0.0,
+        }
     }
-
 
 }
 
@@ -222,7 +220,6 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-
     #[test]
     fn cash_enough_to_play_a_game() {
         
@@ -239,7 +236,4 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-   
-
-   
 }
